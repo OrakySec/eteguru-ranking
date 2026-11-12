@@ -1,0 +1,88 @@
+version: '3.8'
+
+# Stack: eteguru  (ranking de presenteadores da live)
+# Cole este arquivo em Portainer > Stacks > Add stack > Web editor.
+# As variáveis ficam em "Environment variables" (lista em .env.example).
+
+services:
+  app:
+    image: ${APP_IMAGE:-ghcr.io/orakysec/eteguru-ranking-app:latest}
+    environment:
+      NODE_ENV: production
+      TZ: America/Sao_Paulo
+      PORT: "3000"
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: ${POSTGRES_USER:-eteguru}
+      DB_NAME: ${POSTGRES_DB:-eteguru}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+      TIKTOK_USERNAME: ${TIKTOK_USERNAME:-eteguru}
+      EULER_API_KEY: ${EULER_API_KEY:-}
+      COLLECTOR_ENABLED: ${COLLECTOR_ENABLED:-true}
+    networks:
+      - eteguru_net
+      - YkaroNET
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any        # equivalente ao "unless-stopped" no Swarm
+        delay: 5s
+      update_config:
+        order: start-first    # sobe o novo antes de desligar o antigo
+        failure_action: rollback
+        monitor: 60s
+      rollback_config:
+        order: start-first
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 384M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=YkaroNET"
+        - "traefik.http.routers.eteguru-app.rule=Host(`${SITE_DOMAIN:?Defina SITE_DOMAIN}`)"
+        - "traefik.http.routers.eteguru-app.entrypoints=websecure"
+        - "traefik.http.routers.eteguru-app.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.eteguru-app.loadbalancer.server.port=3000"
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-eteguru}
+      POSTGRES_DB: ${POSTGRES_DB:-eteguru}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD}
+      TZ: America/Sao_Paulo
+    volumes:
+      - eteguru_pgdata:/var/lib/postgresql/data
+    networks:
+      - eteguru_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 256M
+
+volumes:
+  eteguru_pgdata:
+
+networks:
+  eteguru_net:
+    driver: overlay
+    attachable: true
+  YkaroNET:
+    external: true

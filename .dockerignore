@@ -1,0 +1,16 @@
+.git
+.github
+.claude
+.gitignore
+.gitattributes
+.dockerignore
+.env
+.env.*
+node_modules
+dist
+tmp
+scripts
+Dockerfile
+docker-compose*.yml
+*.md
+src/**/*.test.ts
