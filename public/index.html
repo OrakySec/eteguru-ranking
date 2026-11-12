@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0d">
+  <title>Ranking @eteguru</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Ranking <span class="accent">@eteguru</span></h1>
+    <p class="live" id="live" data-on="false"><span class="dot"></span><span id="live-txt">Offline</span></p>
+  </header>
+
+  <main>
+    <section class="board">
+      <div class="board-head">
+        <h2 id="titulo">Top 10 do mês</h2>
+        <p class="aviso">Ranking parcial, não oficial</p>
+      </div>
+      <ol id="lista" class="lista" aria-live="polite">
+        <li class="vazio">Carregando...</li>
+      </ol>
+      <p class="rodape">
+        <span id="conexao" class="conexao">Conectando...</span>
+        <span id="atualizado"></span>
+      </p>
+    </section>
+  </main>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
