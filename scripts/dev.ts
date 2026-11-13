@@ -8,5 +8,7 @@ process.env.COLLECTOR_ENABLED ??= 'false';
 process.env.DEV_TOOLS ??= 'true';
 process.env.PORT ??= '3000';
 process.env.UPLOAD_DIR ??= 'tmp/uploads';
+// Senha só para teste local (na VPS a senha real fica na variável ADMIN_PASSWORD do Portainer).
+process.env.ADMIN_PASSWORD ??= 'senha-de-teste-local';
 
 await import('../src/index.ts');

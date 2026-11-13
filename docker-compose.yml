@@ -20,6 +20,7 @@ services:
       EULER_API_KEY: ${EULER_API_KEY:-}
       COLLECTOR_ENABLED: ${COLLECTOR_ENABLED:-true}
       UPLOAD_DIR: /app/data/uploads
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Defina ADMIN_PASSWORD (senha do painel)}
     volumes:
       - eteguru_uploads:/app/data/uploads   # fotos dos prêmios e das entregas
     networks:

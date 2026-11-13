@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Painel @eteguru</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/painel/painel.css">
+</head>
+<body class="adm">
+  <div class="bg" aria-hidden="true"></div>
+
+  <!-- LOGIN -->
+  <main id="v-login" class="wrap login" hidden>
+    <p class="tag">// Acesso restrito</p>
+    <h1>Painel<br><span class="accent">@eteguru</span></h1>
+    <form id="f-login" class="panel card">
+      <label>Senha
+        <input type="password" name="senha" autocomplete="current-password" required autofocus>
+      </label>
+      <button class="btn">Entrar</button>
+      <p id="login-erro" class="erro" role="alert"></p>
+    </form>
+  </main>
+
+  <!-- PAINEL -->
+  <div id="v-app" hidden>
+    <header class="wrap adm-top">
+      <h1>Painel <span class="accent">@eteguru</span></h1>
+      <div class="adm-top-acoes">
+        <a href="/" target="_blank" rel="noopener" class="link">Ver site</a>
+        <button id="sair" class="link">Sair</button>
+      </div>
+    </header>
+
+    <nav class="tabs" aria-label="Seções do painel">
+      <div class="wrap tabs-in" id="abas">
+        <a href="#inicio">Início</a>
+        <a href="#ranking">Ranking</a>
+        <a href="#pessoas">Pessoas</a>
+        <a href="#premio">Prêmio</a>
+        <a href="#entregas">Entregas</a>
+        <a href="#textos">Textos</a>
+        <a href="#auditoria">Auditoria</a>
+      </div>
+    </nav>
+
+    <main class="wrap" id="conteudo"></main>
+  </div>
+
+  <!-- Janela de detalhes da pessoa -->
+  <dialog id="d-pessoa" class="sheet"></dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="/painel/painel.js" defer></script>
+</body>
+</html>

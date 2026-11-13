@@ -4,7 +4,10 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync } from 'node:fs';
+import fastifyCookie from '@fastify/cookie';
+import fastifyMultipart from '@fastify/multipart';
 import { getSiteContent } from './content.js';
+import { adminRoutes } from './admin/routes.js';
 import { config } from './config.js';
 import { dbPing, pool, waitForDb } from './db.js';
 import { migrate } from './migrations.js';
@@ -150,6 +153,20 @@ if (process.env.NODE_ENV !== 'production' && process.env.DEV_TOOLS === 'true') {
   );
 }
 
+// Painel: login por cookie e envio de fotos.
+await app.register(fastifyCookie);
+await app.register(fastifyMultipart);
+await adminRoutes(app, {
+  rankingChanged: scheduleRankingBroadcast,
+  siteChanged: () => hub.broadcast('site', { atualizado: new Date().toISOString() }),
+  liveStatus: () => ({
+    usuario: `@${config.tiktokUsername}`,
+    status: collector.status,
+    conectadoDesde: collector.connectedSince?.toISOString() ?? null,
+    ultimoPresente: collector.lastGiftAt?.toISOString() ?? null,
+  }),
+});
+
 // Conteúdo do site: prêmio do mês, agenda, regras, entregas e fim do mês.
 app.get('/api/site', async (_req, reply) => {
   reply.header('cache-control', 'no-store');
@@ -171,6 +188,7 @@ await app.register(fastifyStatic, {
 await app.register(fastifyStatic, {
   root: fileURLToPath(new URL('../public', import.meta.url)),
   index: ['index.html'],
+  redirect: true,
   maxAge: 0,
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.html')) res.setHeader('cache-control', 'no-cache');

@@ -20,6 +20,10 @@ export const config = {
   collectorEnabled: optional('COLLECTOR_ENABLED', 'true') !== 'false',
   /** Pasta das imagens enviadas pelo painel (no Docker fica num volume). */
   uploadDir: resolve(optional('UPLOAD_DIR', '/app/data/uploads')),
+  /** Senha do painel. Sem ela (ou curta demais), o painel fica desligado. */
+  adminPassword: optional('ADMIN_PASSWORD'),
+  /** Em produção o cookie de login só trafega por HTTPS. */
+  secureCookies: optional('NODE_ENV') === 'production',
   db: {
     host: optional('DB_HOST', 'db'),
     port: Number(optional('DB_PORT', '5432')),

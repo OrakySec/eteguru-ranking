@@ -121,6 +121,34 @@ const migrations: { id: number; name: string; sql: string }[] = [
       }'::jsonb);
     `,
   },
+  {
+    id: 3,
+    name: 'painel: sessões, auditoria e cadastro manual',
+    sql: `
+      -- Sessões de login do painel. Guardamos só o hash do token, nunca o token.
+      create table admin_sessions (
+        token_hash  text primary key,
+        created_at  timestamptz not null default now(),
+        expires_at  timestamptz not null,
+        ip          text,
+        user_agent  text
+      );
+
+      -- Tudo que é feito no painel fica registrado aqui (auditoria).
+      create table admin_log (
+        id       bigserial primary key,
+        at       timestamptz not null default now(),
+        action   text not null,
+        details  jsonb not null default '{}'::jsonb,
+        ip       text
+      );
+      create index admin_log_at_idx on admin_log (at desc);
+
+      -- Cadastro manual pelo @: o ID real só é conhecido no primeiro presente.
+      alter table viewers add column manual boolean not null default false;
+      create index viewers_unique_id_idx on viewers (lower(unique_id));
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {

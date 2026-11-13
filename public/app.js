@@ -76,6 +76,8 @@
     es.addEventListener('error', function () { $('conexao').textContent = 'Reconectando...'; $('conexao').classList.remove('ok'); });
     es.addEventListener('ranking', function (e) { renderRanking(JSON.parse(e.data)); });
     es.addEventListener('live', function (e) { renderLive(JSON.parse(e.data)); });
+    // Você mudou prêmio, entregas ou textos no painel: recarrega essa parte.
+    es.addEventListener('site', function () { carregarSite(); });
   }
 
   // ---------- Contagem regressiva ----------
