@@ -39,5 +39,8 @@ jobs:
           docker build \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             -t ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} .
+          # Confere se a imagem final consegue carregar as bibliotecas antes de publicar
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest node -e \
+            "Promise.all([import('sharp'),import('tiktok-live-connector'),import('pg')]).then(([s])=>console.log('ok, vips',s.default.versions.vips))"
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
