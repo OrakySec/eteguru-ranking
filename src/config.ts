@@ -1,6 +1,8 @@
 // Lê as configurações das variáveis de ambiente (preenchidas no Portainer).
 // Nenhuma senha ou chave fica no código.
 
+import { resolve } from 'node:path';
+
 function required(name: string): string {
   const v = process.env[name];
   if (!v || !v.trim()) throw new Error(`Variável de ambiente obrigatória não definida: ${name}`);
@@ -16,6 +18,8 @@ export const config = {
   tiktokUsername: optional('TIKTOK_USERNAME', 'eteguru').replace(/^@/, ''),
   eulerApiKey: optional('EULER_API_KEY') || undefined,
   collectorEnabled: optional('COLLECTOR_ENABLED', 'true') !== 'false',
+  /** Pasta das imagens enviadas pelo painel (no Docker fica num volume). */
+  uploadDir: resolve(optional('UPLOAD_DIR', '/app/data/uploads')),
   db: {
     host: optional('DB_HOST', 'db'),
     port: Number(optional('DB_PORT', '5432')),

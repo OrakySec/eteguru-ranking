@@ -7,5 +7,6 @@ process.env.DB_PASSWORD ??= 'dev';
 process.env.COLLECTOR_ENABLED ??= 'false';
 process.env.DEV_TOOLS ??= 'true';
 process.env.PORT ??= '3000';
+process.env.UPLOAD_DIR ??= 'tmp/uploads';
 
 await import('../src/index.ts');

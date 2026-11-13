@@ -3,31 +3,112 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0b0b0d">
+  <meta name="theme-color" content="#0a0a0b">
+  <meta name="description" content="Ranking mensal de presenteadores da live @eteguru. O TOP 1 do mês ganha o prêmio.">
   <title>Ranking @eteguru</title>
+  <link rel="preload" href="/fonts/barlow-condensed-latin-900-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header class="top">
-    <h1>Ranking <span class="accent">@eteguru</span></h1>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header class="hero wrap">
+    <p class="tag">// Operação mensal</p>
+    <h1>Ranking<br><span class="accent">@eteguru</span></h1>
     <p class="live" id="live" data-on="false"><span class="dot"></span><span id="live-txt">Offline</span></p>
+
+    <div class="countdown panel" aria-live="off">
+      <p class="label" id="cd-label">O ranking de <span id="cd-mes">...</span> fecha em</p>
+      <p class="label" id="cd-fechado" hidden>Ranking fechado. Apurando o vencedor...</p>
+      <div class="cd" id="cd">
+        <div><b id="cd-d">00</b><span>dias</span></div>
+        <div><b id="cd-h">00</b><span>horas</span></div>
+        <div><b id="cd-m">00</b><span>min</span></div>
+        <div><b id="cd-s">00</b><span>seg</span></div>
+      </div>
+    </div>
   </header>
 
-  <main>
-    <section class="board">
-      <div class="board-head">
-        <h2 id="titulo">Top 10 do mês</h2>
-        <p class="aviso">Ranking parcial, não oficial</p>
+  <nav class="tabs" aria-label="Seções">
+    <div class="wrap tabs-in">
+      <a href="#ranking" class="on">Ranking</a>
+      <a href="#premio">Prêmio</a>
+      <a href="#entregas">Entregas</a>
+      <a href="#regras">Regras</a>
+    </div>
+  </nav>
+
+  <main class="wrap">
+    <!-- RANKING -->
+    <section id="ranking" class="sec">
+      <div class="sec-head">
+        <h2><span class="num">01</span> Top 10 <span id="rk-mes" class="muted"></span></h2>
+        <p class="badge">Parcial · não oficial</p>
       </div>
-      <ol id="lista" class="lista" aria-live="polite">
-        <li class="vazio">Carregando...</li>
-      </ol>
+      <div id="podio" class="podio"></div>
+      <ol id="lista" class="lista" start="4" aria-live="polite"></ol>
+      <p id="vazio" class="vazio panel" hidden>Ninguém pontuou ainda neste mês.<br><b>O primeiro presente leva o topo.</b></p>
       <p class="rodape">
         <span id="conexao" class="conexao">Conectando...</span>
         <span id="atualizado"></span>
       </p>
     </section>
+
+    <!-- PRÊMIO -->
+    <section id="premio" class="sec">
+      <div class="sec-head">
+        <h2><span class="num">02</span> Prêmio do mês</h2>
+      </div>
+      <article class="premio panel">
+        <div id="galeria" class="galeria" hidden></div>
+        <div id="dots" class="dots" hidden></div>
+        <div class="premio-txt">
+          <p class="label">TOP 1 de <span id="pr-mes">...</span> leva</p>
+          <h3 id="pr-titulo">Prêmio a definir</h3>
+          <p id="pr-desc" class="desc">O prêmio deste mês será revelado em breve. Fique de olho nas lives.</p>
+        </div>
+      </article>
+    </section>
+
+    <!-- ENTREGAS -->
+    <section id="entregas" class="sec">
+      <div class="sec-head">
+        <h2><span class="num">03</span> Ganhadores e entregas</h2>
+      </div>
+      <div id="entregas-lista" class="entregas"></div>
+      <p id="entregas-vazio" class="vazio panel">O primeiro ganhador sai no fim deste mês.<br><b>Pode ser você.</b></p>
+    </section>
+
+    <!-- REGRAS -->
+    <section id="regras" class="sec">
+      <div class="sec-head">
+        <h2><span class="num">04</span> Agenda e regras</h2>
+      </div>
+      <div class="panel bloco">
+        <h3 class="mini">Horários das lives</h3>
+        <ul id="agenda" class="agenda"></ul>
+        <p id="agenda-vazia" class="muted">Horários em breve. Siga <b>@eteguru</b> no TikTok para receber o aviso quando a live começar.</p>
+      </div>
+      <div class="panel bloco">
+        <h3 class="mini">Regras resumidas</h3>
+        <ol id="regras-lista" class="regras"></ol>
+      </div>
+      <div class="panel bloco privacidade">
+        <h3 class="mini">Privacidade</h3>
+        <p id="privacidade"></p>
+      </div>
+    </section>
   </main>
+
+  <footer class="wrap foot">
+    <p><b>Ranking parcial e não oficial.</b> O ranking oficial do TikTok é a referência final para definir o vencedor.</p>
+    <p class="muted">Site independente, sem vínculo com o TikTok.</p>
+  </footer>
+
+  <dialog id="zoom" class="zoom">
+    <img id="zoom-img" alt="">
+    <form method="dialog"><button aria-label="Fechar">Fechar</button></form>
+  </dialog>
 
   <script src="/app.js" defer></script>
 </body>

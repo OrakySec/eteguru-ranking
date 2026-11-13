@@ -19,6 +19,9 @@ services:
       TIKTOK_USERNAME: ${TIKTOK_USERNAME:-eteguru}
       EULER_API_KEY: ${EULER_API_KEY:-}
       COLLECTOR_ENABLED: ${COLLECTOR_ENABLED:-true}
+      UPLOAD_DIR: /app/data/uploads
+    volumes:
+      - eteguru_uploads:/app/data/uploads   # fotos dos prêmios e das entregas
     networks:
       - eteguru_net
       - YkaroNET
@@ -79,6 +82,7 @@ services:
 
 volumes:
   eteguru_pgdata:
+  eteguru_uploads:
 
 networks:
   eteguru_net:

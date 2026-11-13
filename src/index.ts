@@ -3,6 +3,8 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
+import { mkdirSync } from 'node:fs';
+import { getSiteContent } from './content.js';
 import { config } from './config.js';
 import { dbPing, pool, waitForDb } from './db.js';
 import { migrate } from './migrations.js';
@@ -147,6 +149,23 @@ if (process.env.NODE_ENV !== 'production' && process.env.DEV_TOOLS === 'true') {
     },
   );
 }
+
+// Conteúdo do site: prêmio do mês, agenda, regras, entregas e fim do mês.
+app.get('/api/site', async (_req, reply) => {
+  reply.header('cache-control', 'no-store');
+  return getSiteContent();
+});
+
+// Imagens enviadas pelo painel (prêmios e fotos de entrega).
+mkdirSync(config.uploadDir, { recursive: true });
+await app.register(fastifyStatic, {
+  root: config.uploadDir,
+  prefix: '/uploads/',
+  decorateReply: false,
+  index: false,
+  maxAge: '7d',
+  immutable: true,
+});
 
 // Site público (arquivos da pasta public/).
 await app.register(fastifyStatic, {

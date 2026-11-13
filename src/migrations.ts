@@ -62,6 +62,65 @@ const migrations: { id: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: 2,
+    name: 'prêmios, entregas e textos do site',
+    sql: `
+      -- Textos editáveis do site (agenda, regras etc.), guardados como JSON.
+      create table settings (
+        key         text primary key,
+        value       jsonb not null,
+        updated_at  timestamptz not null default now()
+      );
+
+      -- Um prêmio por mês (AAAA-MM).
+      create table prizes (
+        month        text primary key,
+        title        text not null,
+        description  text not null default '',
+        updated_at   timestamptz not null default now()
+      );
+
+      -- Fotos do prêmio (arquivos no volume de uploads).
+      create table prize_images (
+        id          bigserial primary key,
+        month       text not null references prizes(month) on delete cascade,
+        file        text not null,
+        alt         text not null default '',
+        sort        integer not null default 0,
+        created_at  timestamptz not null default now()
+      );
+      create index prize_images_month_idx on prize_images (month, sort);
+
+      -- Ganhadores e entregas dos prêmios.
+      create table deliveries (
+        id            bigserial primary key,
+        month         text not null,               -- mês do ranking (AAAA-MM)
+        user_id       text references viewers(user_id),
+        winner_name   text not null,               -- nome exibido no site
+        prize_title   text not null,
+        coins         integer,                     -- pontuação final do ganhador (opcional)
+        status        text not null default 'aguardando' check (status in ('aguardando', 'entregue')),
+        delivered_at  date,
+        photo         text,                        -- foto da entrega (opcional)
+        note          text not null default '',
+        created_at    timestamptz not null default now()
+      );
+      create index deliveries_month_idx on deliveries (month desc);
+
+      insert into settings (key, value) values ('site', '{
+        "agenda": [],
+        "regras": [
+          "O ranking vale do dia 1 ao último dia de cada mês, no horário de Brasília.",
+          "Conta o valor em moedas de todos os presentes enviados nas lives do @eteguru.",
+          "Presentes enviados para convidados da live não contam.",
+          "O TOP 1 do mês ganha o prêmio. O vencedor é anunciado ao vivo.",
+          "Este ranking é parcial e não oficial. Em caso de diferença, vale o ranking oficial do TikTok."
+        ],
+        "privacidade": "Seu apelido do TikTok aparece publicamente neste ranking. Se preferir não aparecer, avise na live ou por mensagem que o nome é ocultado."
+      }'::jsonb);
+    `,
+  },
 ];
 
 export async function migrate(): Promise<void> {
