@@ -29,7 +29,14 @@ export interface CollectorEvents {
   gift: [GiftEvent];
   streak: [GiftEvent];
   status: [CollectorStatus, string?];
+  /** Não consegue conectar há vários minutos por erro (não por live offline). */
+  trouble: [string];
 }
+
+/** Sem receber nada do TikTok por esse tempo, a conexão é considerada travada. */
+const STALL_MS = 5 * 60_000;
+/** Erros seguidos por esse tempo disparam o alerta de problema. */
+const TROUBLE_MS = 3 * 60_000;
 
 const sleep = (ms: number, signal: AbortSignal) =>
   new Promise<void>((resolve) => {
@@ -85,10 +92,15 @@ export class LiveCollector extends EventEmitter<CollectorEvents> {
     let retryMs = 5_000;
     let wasConnected = false;
 
+    let errorSince = 0;
+    let troubleSent = false;
+
     while (!signal.aborted) {
-      this.setStatus(wasConnected ? 'reconectando' : 'conectando');
+      // Enquanto espera a live começar, não fica alternando o status a cada checagem.
+      if (this._status !== 'aguardando-live') this.setStatus(wasConnected ? 'reconectando' : 'conectando');
       const result = await this.runOnce(signal);
       if (signal.aborted) break;
+      if (result.kind !== 'error') { errorSince = 0; troubleSent = false; }
 
       switch (result.kind) {
         case 'offline':
@@ -110,10 +122,15 @@ export class LiveCollector extends EventEmitter<CollectorEvents> {
           wasConnected = true;
           this.setStatus('reconectando', result.detail);
           await sleep(retryMs, signal);
-          retryMs = Math.min(retryMs * 2, 120_000);
+          retryMs = Math.min(retryMs * 2, 60_000);
           break;
         case 'error':
           log.warn('falha ao conectar', { detail: result.detail });
+          if (!errorSince) errorSince = Date.now();
+          if (!troubleSent && Date.now() - errorSince >= TROUBLE_MS) {
+            troubleSent = true;
+            this.emit('trouble', result.detail);
+          }
           await sleep(retryMs, signal);
           retryMs = Math.min(retryMs * 2, 120_000);
           break;
@@ -135,14 +152,20 @@ export class LiveCollector extends EventEmitter<CollectorEvents> {
       this.conn = conn;
       let ended = false;
       let settled = false;
+      let lastDataAt = Date.now();
+      let watchdog: NodeJS.Timeout | null = null;
       const finish = (r: Parameters<typeof resolve>[0]) => {
         if (settled) return;
         settled = true;
+        if (watchdog) clearInterval(watchdog);
         conn.removeAllListeners();
         if (this.conn === conn) this.conn = null;
         resolve(r);
       };
 
+      // Vigia: se a conexão parece aberta mas nada chega do TikTok por 5 minutos,
+      // ela travou em silêncio. Fecha e reconecta.
+      conn.on(ControlEvent.WEBSOCKET_DATA, () => { lastDataAt = Date.now(); });
       conn.on(WebcastEvent.GIFT, (msg) => this.handleGift(msg as unknown as RawGiftMessage));
       conn.on(WebcastEvent.STREAM_END, () => { ended = true; });
       conn.on(ControlEvent.ERROR, (err) => log.warn('erro na conexão', errorInfo(err)));
@@ -153,7 +176,15 @@ export class LiveCollector extends EventEmitter<CollectorEvents> {
 
       conn.connect()
         .then((state) => {
+          if (settled) return;
           this.setStatus('conectado', `sala ${state.roomId}`);
+          lastDataAt = Date.now();
+          watchdog = setInterval(() => {
+            if (Date.now() - lastDataAt < STALL_MS) return;
+            log.warn('conexão travada: nada recebido do TikTok há 5 minutos, reconectando');
+            finish({ kind: 'dropped', detail: 'conexão travada (sem dados)' });
+            conn.disconnect().catch(() => { /* já fechada */ });
+          }, 30_000);
         })
         .catch((err) => {
           if (err instanceof UserOfflineError) finish({ kind: 'offline' });

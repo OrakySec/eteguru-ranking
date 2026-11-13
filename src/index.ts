@@ -8,6 +8,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyMultipart from '@fastify/multipart';
 import { getSiteContent } from './content.js';
 import { adminRoutes } from './admin/routes.js';
+import { sendAlert, wireAlerts } from './alerts.js';
 import { config } from './config.js';
 import { dbPing, pool, waitForDb } from './db.js';
 import { migrate } from './migrations.js';
@@ -203,8 +204,25 @@ async function main() {
   await refreshRanking();
   await app.listen({ host: '0.0.0.0', port: config.port });
   log.info('servidor no ar', { port: config.port, live: config.tiktokUsername });
+  wireAlerts(collector);
+  void bootAlert();
   if (config.collectorEnabled) collector.start();
   else log.warn('coletor desligado (COLLECTOR_ENABLED=false)');
+}
+
+/** Avisa no Telegram que o serviço (re)iniciou. No máximo 1 aviso a cada 15 min, para não lotar o chat. */
+async function bootAlert() {
+  try {
+    const { rows } = await pool.query<{ recent: boolean }>(
+      `select (value->>'at')::timestamptz > now() - interval '15 minutes' as recent from settings where key = 'boot_alert'`);
+    if (rows[0]?.recent) return;
+    await pool.query(
+      `insert into settings (key, value) values ('boot_alert', jsonb_build_object('at', now()))
+       on conflict (key) do update set value = excluded.value, updated_at = now()`);
+    await sendAlert('🔄 RANKING: serviço ligado (atualização ou reinício). Se você estiver ao vivo, ele reconecta sozinho em instantes.');
+  } catch (err) {
+    log.warn('falha no aviso de inicialização', errorInfo(err));
+  }
 }
 
 async function shutdown(signal: string) {

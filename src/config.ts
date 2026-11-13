@@ -22,6 +22,11 @@ export const config = {
   uploadDir: resolve(optional('UPLOAD_DIR', '/app/data/uploads')),
   /** Senha do painel. Sem ela (ou curta demais), o painel fica desligado. */
   adminPassword: optional('ADMIN_PASSWORD'),
+  /** Token do bot do Telegram (alertas). Opcional. */
+  telegramToken: optional('TELEGRAM_BOT_TOKEN'),
+  /** Chat do Telegram. Opcional: normalmente é vinculado pelo painel. */
+  telegramChatId: optional('TELEGRAM_CHAT_ID'),
+  siteDomain: optional('SITE_DOMAIN'),
   /** Em produção o cookie de login só trafega por HTTPS. */
   secureCookies: optional('NODE_ENV') === 'production',
   db: {

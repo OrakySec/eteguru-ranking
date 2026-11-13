@@ -7,6 +7,9 @@ import { getSettings, type SiteSettings } from '../content.js';
 import { currentMonth, getAdminRanking, isValidMonth, manualUserId } from '../store.js';
 import { deleteImage, MAX_UPLOAD_BYTES, saveImage, UploadError } from '../uploads.js';
 import { audit, login, logout, requireAdmin } from './auth.js';
+import {
+  findLatestChat, getTelegramSettings, saveTelegramSettings, sendAlert, telegramConfigured,
+} from '../alerts.js';
 
 export interface AdminDeps {
   /** Avisa que o ranking público mudou (para atualizar quem está com a página aberta). */
@@ -338,6 +341,76 @@ export async function adminRoutes(app: FastifyInstance, deps: AdminDeps) {
       await audit('textos do site alterados', { agenda: agenda.length, regras: regras.length }, req.ip);
       deps.siteChanged();
       return { ok: true };
+    });
+
+    // ---------- Alertas no Telegram ----------
+    r.get('/api/admin/telegram', async () => {
+      const s = await getTelegramSettings();
+      return {
+        configurado: telegramConfigured(),
+        vinculado: !!s?.chatId,
+        nome: s?.nome ?? null,
+        avisarInicioFim: s?.avisarInicioFim !== false,
+      };
+    });
+
+    r.post('/api/admin/telegram/vincular', async (req) => {
+      if (!telegramConfigured()) throw new BadRequest('Falta a variável TELEGRAM_BOT_TOKEN no Portainer.');
+      const chat = await findLatestChat().catch((e: Error) => { throw new BadRequest(e.message); });
+      if (!chat) throw new BadRequest('Nenhuma mensagem encontrada. Abra o seu bot no Telegram, toque em Iniciar (ou mande "oi") e tente de novo.');
+      const atual = await getTelegramSettings();
+      await saveTelegramSettings({ chatId: chat.chatId, nome: chat.nome, avisarInicioFim: atual?.avisarInicioFim !== false });
+      await audit('telegram vinculado', { nome: chat.nome }, req.ip);
+      await sendAlert('✅ RANKING: alertas vinculados a este chat. Você vai receber os avisos da live aqui.', chat.chatId);
+      return { ok: true, nome: chat.nome };
+    });
+
+    r.post('/api/admin/telegram/teste', async () => {
+      const ok = await sendAlert('🔔 RANKING: mensagem de teste. Se você leu isto, os alertas estão funcionando.');
+      if (!ok) throw new BadRequest('Não consegui enviar. Confira o token e vincule o chat de novo.');
+      return { ok: true };
+    });
+
+    r.put('/api/admin/telegram', async (req) => {
+      const b = (req.body ?? {}) as Record<string, unknown>;
+      const atual = await getTelegramSettings();
+      if (!atual?.chatId) throw new BadRequest('Vincule o Telegram primeiro.');
+      await saveTelegramSettings({ ...atual, avisarInicioFim: b.avisarInicioFim === true });
+      return { ok: true };
+    });
+
+    // ---------- Planilha para auditoria ----------
+    // Todos os presentes e correções do mês, para conferir com o TikTok (abre no Excel/Planilhas).
+    r.get<{ Querystring: { mes?: string } }>('/api/admin/exportar.csv', async (req, reply) => {
+      const mes = req.query.mes || currentMonth();
+      if (!isValidMonth(mes)) throw new BadRequest('Mês inválido.');
+      const tz = 'America/Sao_Paulo';
+      const gifts = await pool.query(
+        `select to_char(g.sent_at at time zone '${tz}', 'DD/MM/YYYY HH24:MI:SS') as quando, g.user_id, g.unique_id, g.nickname,
+                g.gift_name, g.quantity, g.coins_each, g.coins_total, g.to_host, g.to_unique_id
+           from gift_events g
+          where g.sent_at >= (($1 || '-01')::timestamp at time zone '${tz}')
+            and g.sent_at < ((($1 || '-01')::date + interval '1 month')::timestamp at time zone '${tz}')
+          order by g.sent_at`, [mes]);
+      const adj = await pool.query(
+        `select to_char(a.created_at at time zone '${tz}', 'DD/MM/YYYY HH24:MI:SS') as quando, a.user_id, v.unique_id, v.nickname, a.coins, a.reason
+           from adjustments a join viewers v on v.user_id = a.user_id where a.month = $1 order by a.id`, [mes]);
+      const cell = (v: unknown) => {
+        let s = v == null ? '' : String(v);
+        // Evita fórmulas maliciosas no Excel (só em texto; números negativos ficam como número).
+        if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+        return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const lines = [
+        ['tipo', 'data_hora', 'id_usuario', 'arroba', 'apelido', 'presente_ou_motivo', 'quantidade', 'moedas_cada', 'moedas_total', 'conta_no_ranking', 'para'].join(';'),
+        ...gifts.rows.map((g) => ['presente', g.quando, g.user_id, g.unique_id, g.nickname, g.gift_name, g.quantity, g.coins_each,
+          g.coins_total, g.to_host ? 'sim' : 'nao', g.to_unique_id ?? 'anfitriao'].map(cell).join(';')),
+        ...adj.rows.map((a) => ['correcao', a.quando, a.user_id, a.unique_id, a.nickname, a.reason, '', '', a.coins, 'sim', ''].map(cell).join(';')),
+      ];
+      await audit('planilha exportada', { mes }, req.ip);
+      reply.header('content-type', 'text/csv; charset=utf-8');
+      reply.header('content-disposition', `attachment; filename="ranking-eteguru-${mes}.csv"`);
+      return '﻿' + lines.join('\r\n'); // BOM: acentos certos no Excel
     });
 
     // ---------- Auditoria ----------

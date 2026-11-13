@@ -135,8 +135,39 @@
 
   // ---------- Início ----------
 
+  function cardTelegram(t) {
+    var card = h('section', { class: 'panel card' }, h('h3', null, 'Alertas no Telegram'));
+    if (!t.configurado) {
+      add(card, h('p', { class: 'ajuda' }, 'Desligado: falta a variável TELEGRAM_BOT_TOKEN no Portainer. O passo a passo está no guia da Etapa 6.'));
+      return card;
+    }
+    var bVinc = h('button', { class: 'btn' + (t.vinculado ? ' sec' : '') }, t.vinculado ? 'Vincular de novo' : 'Vincular meu Telegram');
+    bVinc.addEventListener('click', acao(bVinc, function () {
+      return api('POST', '/api/admin/telegram/vincular', {}).then(function (r) { toast('Vinculado a ' + r.nome + '. Confira o Telegram.'); abrirTela(); });
+    }));
+    var bTeste = h('button', { class: 'btn sec' }, 'Enviar teste');
+    bTeste.addEventListener('click', acao(bTeste, function () {
+      return api('POST', '/api/admin/telegram/teste', {}).then(function () { toast('Teste enviado. Confira o Telegram.'); });
+    }));
+    var chk = h('input', { type: 'checkbox', checked: t.avisarInicioFim });
+    chk.addEventListener('change', function () {
+      api('PUT', '/api/admin/telegram', { avisarInicioFim: chk.checked })
+        .then(function () { toast('Preferência salva.'); })
+        .catch(function (e) { chk.checked = !chk.checked; falhou(e); });
+    });
+    add(card, [
+      h('p', { class: 'ajuda' }, t.vinculado
+        ? 'Enviando para: ' + t.nome + '. Você recebe aviso se a conexão cair durante a live ou se não conseguir conectar.'
+        : 'Abra o seu bot no Telegram, toque em Iniciar e depois toque no botão abaixo.'),
+      t.vinculado ? h('label', { class: 'check' }, chk, 'Avisar também início e fim da live (com resumo)') : null,
+      h('div', { class: 'acoes' }, bVinc, t.vinculado ? bTeste : null),
+    ]);
+    return card;
+  }
+
   function telaInicio() {
-    return api('GET', '/api/admin/resumo').then(function (r) {
+    return Promise.all([api('GET', '/api/admin/resumo'), api('GET', '/api/admin/telegram')]).then(function (res) {
+      var r = res[0];
       var on = r.live.status === 'conectado';
       var nomes = {
         conectado: 'Conectado na live', 'aguardando-live': 'Aguardando a live', conectando: 'Conectando...',
@@ -154,6 +185,7 @@
             return h('li', null, h('div', { class: 'principal' }, h('span', null, nomes[c.status] || c.status), h('span', { class: 'sub' }, dataHora(c.at))),
               c.detail ? h('div', { class: 'sub' }, c.detail) : null);
           }) : h('li', { class: 'vazio-adm' }, 'Sem registros ainda.'))),
+        cardTelegram(res[1]),
         h('section', { class: 'panel card' },
           h('h3', null, 'Últimos presentes recebidos'),
           h('ul', { class: 'itens' }, r.presentes.length ? r.presentes.map(function (g) {
@@ -186,10 +218,14 @@
         abrirTela();
       });
       var titulo = r.periodo.tipo === '30dias' ? 'Últimos 30 dias' : nomeMes(r.periodo.mes);
+      var planilha = r.periodo.mes
+        ? h('a', { class: 'btn sec mini', href: '/api/admin/exportar.csv?mes=' + r.periodo.mes, download: true }, 'Baixar planilha do mês')
+        : null;
       return h('section', { class: 'panel card' },
         h('h2', null, titulo),
         h('p', { class: 'ajuda' }, 'Lista completa, incluindo quem está escondido. Toque numa pessoa para renomear, esconder ou corrigir pontos.'),
         form,
+        planilha ? h('p', null, planilha, ' ', h('span', { class: 'muted' }, 'Todos os presentes e correções, para conferir com o TikTok.')) : null,
         h('ul', { class: 'itens' }, r.linhas.length ? r.linhas.map(function (l) {
           return h('li', null, h('button', { class: 'linha-btn', onclick: function () { abrirPessoa(l.user_id); } },
             h('div', { class: 'principal' },

@@ -21,8 +21,16 @@ services:
       COLLECTOR_ENABLED: ${COLLECTOR_ENABLED:-true}
       UPLOAD_DIR: /app/data/uploads
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?Defina ADMIN_PASSWORD (senha do painel)}
+      SITE_DOMAIN: ${SITE_DOMAIN}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     volumes:
       - eteguru_uploads:/app/data/uploads   # fotos dos prêmios e das entregas
+    logging:                                # guarda até 5 x 10 MB de log (não enche o disco)
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     networks:
       - eteguru_net
       - YkaroNET
@@ -64,6 +72,11 @@ services:
       TZ: America/Sao_Paulo
     volumes:
       - eteguru_pgdata:/var/lib/postgresql/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - eteguru_net
     healthcheck:
